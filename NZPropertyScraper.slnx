@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="NZPropertyScraper/NZPropertyScraper.csproj" />
+  <Project Path="Tester/Tester.csproj" />
+</Solution>
