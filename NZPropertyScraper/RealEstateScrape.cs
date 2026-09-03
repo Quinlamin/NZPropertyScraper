@@ -2,6 +2,7 @@
 using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -60,12 +61,12 @@ namespace NZPropertyScraper
                     key = i;
                 }
             }
-            if (key == -1) 
+            if (key == -1)
             {
-                return null ;
+                return null;
             }
             string locale = address.Components[key].LongName;
-            locale = locale.ToLower().Replace(" ","-");
+            locale = locale.ToLower().Replace(" ", "-");
             Console.WriteLine(locale);
             string path = "";
             foreach (string fqslug in slugs)
@@ -85,7 +86,7 @@ namespace NZPropertyScraper
         }
         public static string Scrape(GoogleAddress address)
         {
-            string html  = ScrapeWebsite(GetPath(address)).GetAwaiter().GetResult();
+            string html = ScrapeWebsite(GetPath(address)).GetAwaiter().GetResult();
             _ = GetStatisticalNodes(html);
             return html;
         }
@@ -99,7 +100,7 @@ namespace NZPropertyScraper
                 {
                     htmlContent += await httpClient.GetStringAsync("https://www.realestate.co.nz/residential/sale/" + path + "?page=" + i);
                     Console.WriteLine(i);
-                    
+
 
                 }
                 catch (Exception e)
@@ -117,7 +118,7 @@ namespace NZPropertyScraper
         }
         static async Task<string> ScrapeHousePage(string path)
         {
-            
+
             try
             {
                 return await httpClient.GetStringAsync("https://www.realestate.co.nz" + path);
@@ -125,7 +126,7 @@ namespace NZPropertyScraper
             catch
             {
                 return null;
-                
+
             }
         }
         public static List<List<string>> GetStatisticalNodes(string html)
@@ -134,7 +135,7 @@ namespace NZPropertyScraper
             returnVal.Add(new List<string>());
             // Get Medians. (Sale Price, Asking Price, Rental Price)
             string selector = ".tile--body";
-            IList<HtmlNode> listings =  HTMLOperations.SelectCSS(html, selector);
+            IList<HtmlNode> listings = HTMLOperations.SelectCSS(html, selector);
             foreach (HtmlNode node in listings)
             {
                 RealEstateHouse house = new RealEstateHouse(node);
@@ -143,15 +144,18 @@ namespace NZPropertyScraper
 
             return null;
         }
-        public class RealEstateHouse {
+        public class RealEstateHouse
+        {
 
             public int listedPrice;
             public int bedrooms;
             public int bathrooms;
             public int floorArea;
             public int landArea;
+            private bool finished = false;
 
-            public RealEstateHouse(HtmlNode listing) {
+            public RealEstateHouse(HtmlNode listing)
+            {
                 //Console.WriteLine(listing.OuterHtml);
                 IList<HtmlNode> listingPrice = HTMLOperations.SelectCSS(listing.OuterHtml, "[data-test=\"price-display__price-method\"]");
                 if (listingPrice.Count > 0)
@@ -168,23 +172,31 @@ namespace NZPropertyScraper
                 // Get href to house page
                 IList<HtmlNode> housePage = HTMLOperations.SelectCSS(listing.OuterHtml, "[class*=\"ember-view\"]");
                 string path = housePage.First().GetAttributeValue("href", string.Empty);
-                if (path != string.Empty) {
-                    string html = ScrapeHousePage(path).GetAwaiter().GetResult();
-
-                    IList<HtmlNode> keyFeatures = HTMLOperations.SelectCSS(html, "[data-test=\"features-icons\"]");
-                    IList<HtmlNode> features = HTMLOperations.SelectCSS(keyFeatures.First().OuterHtml, ".items-center");
-                    foreach (HtmlNode feature in features) {
-                        string type = HTMLOperations.SelectCSS(feature.OuterHtml, "title").First().InnerText;
-                        string value = HTMLOperations.SelectCSS(feature.OuterHtml, "span").First().InnerText.Trim();
-
-                        if (type == "Bathroom") bathrooms = int.Parse(value);
-                        if (type == "Bedroom") bedrooms = int.Parse(value);
-                        if (type == "Land area") landArea = int.Parse(value.Remove(value.IndexOf('m')));
-                        if (type == "Floor area") floorArea = int.Parse(value.Remove(value.IndexOf('m')));
-                    }
+                if (path != string.Empty)
+                {
+                    ScrapeSpecificHouse(path);
                 }
             }
+
+            async void ScrapeSpecificHouse(string path)
+            {
+                string html = ScrapeHousePage(path).GetAwaiter().GetResult();
+
+                IList<HtmlNode> keyFeatures = HTMLOperations.SelectCSS(html, "[data-test=\"features-icons\"]");
+                IList<HtmlNode> features = HTMLOperations.SelectCSS(keyFeatures.First().OuterHtml, ".items-center");
+                foreach (HtmlNode feature in features)
+                {
+                    string type = HTMLOperations.SelectCSS(feature.OuterHtml, "title").First().InnerText;
+                    string value = HTMLOperations.SelectCSS(feature.OuterHtml, "span").First().InnerText.Trim();
+
+                    if (type == "Bathroom") bathrooms = int.Parse(value);
+                    if (type == "Bedroom") bedrooms = int.Parse(value);
+                    if (type == "Land area") try { landArea = int.Parse(value.Remove(value.IndexOf('m'))); } catch { }
+                    if (type == "Floor area") try { floorArea = int.Parse(value.Remove(value.IndexOf('m'))); } catch { }
+                }
+                finished = true;
+            }
         }
-        
+
     }
 }
