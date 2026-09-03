@@ -27,6 +27,7 @@ namespace NZPropertyScraper
             {
                 Console.WriteLine(addr.Components[(int)GoogleAddressType.StreetAddress].LongName);
             }
+            
             Console.WriteLine(unvaladdresses.ToList().Count);
             return unvaladdresses;
             

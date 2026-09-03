@@ -8,7 +8,10 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+
 
 namespace NZPropertyScraper
 {
@@ -82,23 +85,105 @@ namespace NZPropertyScraper
         }
         public static string Scrape(GoogleAddress address)
         {
-            return ScrapeWebsite(GetPath(address)).GetAwaiter().GetResult();
+            string html  = ScrapeWebsite(GetPath(address)).GetAwaiter().GetResult();
+            _ = GetStatisticalNodes(html);
+            return html;
         }
         private static HttpClient httpClient = new HttpClient();
         static async Task<string> ScrapeWebsite(string path)
         {
+            string htmlContent = "";
+            for (int i = 1; i < 6; i++)
+            {
+                try
+                {
+                    htmlContent += await httpClient.GetStringAsync("https://www.realestate.co.nz/residential/sale/" + path + "?page=" + i);
+                    Console.WriteLine(i);
+                    
+
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    return htmlContent;
+
+                }
+
+            }
+
+
+            return htmlContent;
+
+        }
+        static async Task<string> ScrapeHousePage(string path)
+        {
+            
             try
             {
-                string htmlContent = await httpClient.GetStringAsync("https://www.realestate.co.nz/insights/" + path);
-                return htmlContent;
+                return await httpClient.GetStringAsync("https://www.realestate.co.nz" + path);
             }
-            catch (Exception e)
+            catch
             {
-                Console.WriteLine(e.Message);
                 return null;
                 
             }
-            
+        }
+        public static List<List<string>> GetStatisticalNodes(string html)
+        {
+            List<List<string>> returnVal = new List<List<string>>();
+            returnVal.Add(new List<string>());
+            // Get Medians. (Sale Price, Asking Price, Rental Price)
+            string selector = ".tile--body";
+            IList<HtmlNode> listings =  HTMLOperations.SelectCSS(html, selector);
+            foreach (HtmlNode node in listings)
+            {
+                RealEstateHouse house = new RealEstateHouse(node);
+                Console.WriteLine("ListedPrice: " + house.listedPrice + " Bedrooms: " + house.bedrooms + " Bathrooms: " + house.bathrooms + " FloorArea: " + house.floorArea + " LandArea: " + house.landArea);
+            }
+
+            return null;
+        }
+        public class RealEstateHouse {
+
+            public int listedPrice;
+            public int bedrooms;
+            public int bathrooms;
+            public int floorArea;
+            public int landArea;
+
+            public RealEstateHouse(HtmlNode listing) {
+                //Console.WriteLine(listing.OuterHtml);
+                IList<HtmlNode> listingPrice = HTMLOperations.SelectCSS(listing.OuterHtml, "[data-test=\"price-display__price-method\"]");
+                if (listingPrice.Count > 0)
+                {
+                    // Console.WriteLine(node.OuterHtml);
+                    // Get Price from node if any
+                    Match match = Regex.Match(listingPrice.First().InnerText, @"\$([\d,.]+)");
+                    string result = match.Success ? match.Groups[1].Value.Replace(",", "") : string.Empty;
+                    if (result != string.Empty)
+                    {
+                        listedPrice = int.Parse(result);
+                    }
+                }
+                // Get href to house page
+                IList<HtmlNode> housePage = HTMLOperations.SelectCSS(listing.OuterHtml, "[class*=\"ember-view\"]");
+                string path = housePage.First().GetAttributeValue("href", string.Empty);
+                if (path != string.Empty) {
+                    string html = ScrapeHousePage(path).GetAwaiter().GetResult();
+
+                    IList<HtmlNode> keyFeatures = HTMLOperations.SelectCSS(html, "[data-test=\"features-icons\"]");
+                    IList<HtmlNode> features = HTMLOperations.SelectCSS(keyFeatures.First().OuterHtml, ".items-center");
+                    foreach (HtmlNode feature in features) {
+                        string type = HTMLOperations.SelectCSS(feature.OuterHtml, "title").First().InnerText;
+                        string value = HTMLOperations.SelectCSS(feature.OuterHtml, "span").First().InnerText.Trim();
+
+                        if (type == "Bathroom") bathrooms = int.Parse(value);
+                        if (type == "Bedroom") bedrooms = int.Parse(value);
+                        if (type == "Land area") landArea = int.Parse(value.Remove(value.IndexOf('m')));
+                        if (type == "Floor area") floorArea = int.Parse(value.Remove(value.IndexOf('m')));
+                    }
+                }
+            }
         }
         
     }

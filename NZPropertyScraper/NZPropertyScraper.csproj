@@ -8,6 +8,7 @@
     <PackageReference Include="Geocoding.Core" Version="5.0.0" />
     <PackageReference Include="Geocoding.Google" Version="5.0.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.13.0" />
+    <PackageReference Include="HtmlAgilityPack.CssSelectors.NetCore" Version="1.2.1" />
   </ItemGroup>
 
   <ItemGroup>
