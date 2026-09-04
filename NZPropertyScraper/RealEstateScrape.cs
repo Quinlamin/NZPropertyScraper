@@ -139,7 +139,7 @@ namespace NZPropertyScraper
             foreach (HtmlNode node in listings)
             {
                 RealEstateHouse house = new RealEstateHouse(node);
-                Console.WriteLine("ListedPrice: " + house.listedPrice + " Bedrooms: " + house.bedrooms + " Bathrooms: " + house.bathrooms + " FloorArea: " + house.floorArea + " LandArea: " + house.landArea);
+                
             }
 
             return null;
