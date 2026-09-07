@@ -1,11 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Text;
-using OpenQA.Selenium;
+﻿using OpenQA.Selenium;
 using OpenQA.Selenium.Firefox;
 using OpenQA.Selenium.Interactions;
 using OpenQA.Selenium.Support.UI;
+using System;
+using System.Buffers.Text;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Drawing;
+using System.IO;
+using System.Reflection;
+using System.Text;
+
 namespace NZPropertyScraper
 {
     public static class WaipaDCScrape
@@ -19,6 +24,7 @@ namespace NZPropertyScraper
             public int landVal;
             public float rates;
             public Dictionary<string, string> propertyValues;
+            public Image satellite;
             public Property(Dictionary<string,string> _propertyValues)
             {
                 foreach (var keyVal in _propertyValues) { 
@@ -39,13 +45,17 @@ namespace NZPropertyScraper
         }
         public static Property PropertyAndRatesWaipa(string inputValue)
         {
+
             Dictionary<string, string> propertyValues = new Dictionary<string, string>();
             FirefoxOptions options = new FirefoxOptions();
+            
             options.AddArgument("--headless");
+            
             using (var driver = new FirefoxDriver(driverLocation,options))
             {
+                
                 driver.Navigate().GoToUrl("https://waipadc.spatial.t1cloud.com/spatial/IntraMaps/ApplicationEngine/frontend/mapbuilder/default.htm?configId=6aa41407-1db8-44e1-8487-0b9a08965283&liteConfigId=9814f62a-448c-4a33-b101-4cf6cac0995a&title=UmF0ZXMlMjBJbmZvcm1hdGlvbg==");
-                IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
+                
                 IWebElement inputField;
                 while (true)
                 {
@@ -109,10 +119,29 @@ namespace NZPropertyScraper
                     //Console.WriteLine(fieldList[i].Text + " " + valueList[i].Text);
                     propertyValues.Add(fieldList[i].Text, valueList[i].Text);
                 }
+
                 
+                string base64 = "";
+                while(base64.Length< 1500000)
+                {
+                    var canvas = driver.FindElement(By.CssSelector("canvas"));
+                    base64 = (string)driver.ExecuteScript("return arguments[0].toDataURL('image/png');", canvas);
+                }
+                Console.WriteLine(base64.Length);
+                if (base64.Contains(","))
+                {
+                    base64 = base64.Split(',')[1];
+                }
                 
+                byte[] imageBytes = Convert.FromBase64String(base64);
+                
+                File.WriteAllBytes("canvas_output.png", imageBytes);
+
             }
-            return new Property(propertyValues);
+            Property property = new Property(propertyValues);
+            property.satellite = Image.FromFile("canvas_output.png");
+            
+            return property;
         }
     }
 }
