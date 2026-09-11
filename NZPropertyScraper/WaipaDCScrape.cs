@@ -13,37 +13,47 @@ using System.Text;
 
 namespace NZPropertyScraper
 {
-    public static class WaipaDCScrape
+    public class Property
     {
-        public static string driverLocation = "DRIVERS/geckodriver.exe";
-
-        
-        public class Property
+        public int capVal;
+        public int landVal;
+        public float rates;
+        public Dictionary<string, string> propertyValues;
+        public Image satellite;
+        public Property(Dictionary<string, string> _propertyValues)
         {
-            public int capVal;
-            public int landVal;
-            public float rates;
-            public Dictionary<string, string> propertyValues;
-            public Image satellite;
-            public Property(Dictionary<string,string> _propertyValues)
+            foreach (var keyVal in _propertyValues)
             {
-                foreach (var keyVal in _propertyValues) { 
-                    if(keyVal.Key.Contains("Capital Value"))
-                    {
-                        capVal = int.Parse(keyVal.Value.Replace("$", ""));
-                    }else if (keyVal.Key.Contains("Land Value"))
-                    {
-                        landVal = int.Parse(keyVal.Value.Replace("$", ""));
-                    }
-                    else if (keyVal.Key.Contains("Total Rates"))
-                    {
-                        rates = float.Parse(keyVal.Value.Replace("$", ""));
-                    }
+                if (keyVal.Key.Contains("Capital Value"))
+                {
+                    capVal = int.Parse(keyVal.Value.Replace("$", ""));
                 }
-                propertyValues = _propertyValues;
+                else if (keyVal.Key.Contains("Land Value"))
+                {
+                    landVal = int.Parse(keyVal.Value.Replace("$", ""));
+                }
+                else if (keyVal.Key.Contains("Total Rates"))
+                {
+                    rates = float.Parse(keyVal.Value.Replace("$", ""));
+                }
             }
+            propertyValues = _propertyValues;
         }
-        public static Property PropertyAndRatesWaipa(string inputValue)
+        public override string ToString()
+        {
+            return "Cap Val: " + capVal + " Land Val: " + landVal + " Rates: " + rates;
+        }
+    }
+    public class WaipaDCScrape
+    {
+        public string driverLocation = string.Empty;
+        
+        public WaipaDCScrape(string _driverLocation)
+        {
+            driverLocation = _driverLocation;
+        }
+        
+        public Property PropertyAndRatesWaipa(string inputValue)
         {
 
             Dictionary<string, string> propertyValues = new Dictionary<string, string>();
