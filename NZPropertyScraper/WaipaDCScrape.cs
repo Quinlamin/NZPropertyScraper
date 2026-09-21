@@ -1,15 +1,10 @@
 ﻿using OpenQA.Selenium;
 using OpenQA.Selenium.Firefox;
 using OpenQA.Selenium.Interactions;
-using OpenQA.Selenium.Support.UI;
 using System;
-using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Drawing;
 using System.IO;
-using System.Reflection;
-using System.Text;
 
 namespace NZPropertyScraper
 {
@@ -18,8 +13,9 @@ namespace NZPropertyScraper
         public int capVal;
         public int landVal;
         public float rates;
+        public string base64satellite;
         public Dictionary<string, string> propertyValues;
-        public Image satellite;
+        
         public Property(Dictionary<string, string> _propertyValues)
         {
             foreach (var keyVal in _propertyValues)
@@ -58,10 +54,23 @@ namespace NZPropertyScraper
 
             Dictionary<string, string> propertyValues = new Dictionary<string, string>();
             FirefoxOptions options = new FirefoxOptions();
-            
+            if (!Directory.Exists("selenium-firefox-profile"))
+            {
+                Directory.CreateDirectory("selenium-firefox-profile");
+            }
             options.AddArgument("--headless");
-            
-            using (var driver = new FirefoxDriver(options))
+            options.AddArgument("--profile");
+            options.AddArgument("selenium-firefox-profile");
+
+            Console.WriteLine($"Current directory: {Environment.CurrentDirectory}");
+            Console.WriteLine($"Driver location: {driverLocation}");
+            Console.WriteLine($"Full driver path: {Path.GetFullPath(driverLocation)}");
+            Console.WriteLine($"Directory exists: {Directory.Exists(driverLocation)}");
+            Console.WriteLine($"Driver exists: {File.Exists(Path.Combine(driverLocation, "geckodriver"))}");
+            byte[] imageBytes;
+            string satellite = "";
+
+            using (var driver = new FirefoxDriver(driverLocation,options))
             {
                 
                 driver.Navigate().GoToUrl("https://waipadc.spatial.t1cloud.com/spatial/IntraMaps/ApplicationEngine/frontend/mapbuilder/default.htm?configId=6aa41407-1db8-44e1-8487-0b9a08965283&liteConfigId=9814f62a-448c-4a33-b101-4cf6cac0995a&title=UmF0ZXMlMjBJbmZvcm1hdGlvbg==");
@@ -90,7 +99,6 @@ namespace NZPropertyScraper
                 var otherButton = driver.FindElement(By.CssSelector("button.mb-landscape-home"));
                 actions.MoveToElement(otherButton).Click().Build().Perform();
                 actions.MoveToElement(inputField).Click().Build().Perform();
-
                 IWebElement result;
                 while (true)
                 {
@@ -142,14 +150,16 @@ namespace NZPropertyScraper
                 {
                     base64 = base64.Split(',')[1];
                 }
+
+                satellite = base64;                
                 
-                byte[] imageBytes = Convert.FromBase64String(base64);
-                
-                File.WriteAllBytes("canvas_output.png", imageBytes);
 
             }
             Property property = new Property(propertyValues);
-            property.satellite = Image.FromFile("canvas_output.png");
+
+            property.base64satellite = satellite;
+
+            
             
             return property;
         }
