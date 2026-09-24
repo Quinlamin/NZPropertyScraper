@@ -14,6 +14,8 @@ namespace NZPropertyScraper
         public int landVal;
         public float rates;
         public string base64satellite;
+        public float rateableArea;
+        public string legalDescription;
         public Dictionary<string, string> propertyValues;
         
         public Property(Dictionary<string, string> _propertyValues)
@@ -31,13 +33,20 @@ namespace NZPropertyScraper
                 else if (keyVal.Key.Contains("Total Rates"))
                 {
                     rates = float.Parse(keyVal.Value.Replace("$", ""));
+                }else if (keyVal.Key.Contains("Rateable Area (ha)"))
+                {
+                    rateableArea = float.Parse(keyVal.Value);
+                    rateableArea *= 10000;
+                }else if (keyVal.Key.Contains("Legal Description"))
+                {
+                    legalDescription = keyVal.Value;
                 }
             }
             propertyValues = _propertyValues;
         }
         public override string ToString()
         {
-            return "Cap Val: " + capVal + " Land Val: " + landVal + " Rates: " + rates;
+            return "Cap Val: " + capVal + " Land Val: " + landVal + " Rates: " + rates+" Area: "+rateableArea+"m2";
         }
     }
     public class WaipaDCScrape
