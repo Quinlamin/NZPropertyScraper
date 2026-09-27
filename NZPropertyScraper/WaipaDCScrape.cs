@@ -16,6 +16,7 @@ namespace NZPropertyScraper
         public string base64satellite;
         public float rateableArea;
         public string legalDescription;
+        public string address;
         public Dictionary<string, string> propertyValues;
         
         public Property(Dictionary<string, string> _propertyValues)
@@ -40,6 +41,9 @@ namespace NZPropertyScraper
                 }else if (keyVal.Key.Contains("Legal Description"))
                 {
                     legalDescription = keyVal.Value;
+                }else if (keyVal.Key.Contains("Situation Address"))
+                {
+                    address = keyVal.Value;
                 }
             }
             propertyValues = _propertyValues;
