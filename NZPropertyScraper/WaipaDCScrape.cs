@@ -5,7 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-
+using System.Threading;
+using System.Threading.Tasks;
 namespace NZPropertyScraper
 {
     public class Property
@@ -56,24 +57,25 @@ namespace NZPropertyScraper
     public class WaipaDCScrape
     {
         public string driverLocation = string.Empty;
-        
+
         public WaipaDCScrape(string _driverLocation)
         {
             driverLocation = _driverLocation;
         }
-        
-        public Property PropertyAndRatesWaipa(string inputValue)
+
+        public async Task<Property> PropertyAndRatesWaipa(string inputValue)
         {
 
             Dictionary<string, string> propertyValues = new Dictionary<string, string>();
             FirefoxOptions options = new FirefoxOptions();
-            if (!Directory.Exists("selenium-firefox-profile"))
+            string profDir = ((long)DateTime.Now.TimeOfDay.TotalMilliseconds).ToString();
+            if (!Directory.Exists("selenium-firefox-profile" + profDir))
             {
-                Directory.CreateDirectory("selenium-firefox-profile");
+                Directory.CreateDirectory("selenium-firefox-profile" + profDir);
             }
             options.AddArgument("--headless");
             options.AddArgument("--profile");
-            options.AddArgument("selenium-firefox-profile");
+            options.AddArgument("selenium-firefox-profile" + profDir);
 
             Console.WriteLine($"Current directory: {Environment.CurrentDirectory}");
             Console.WriteLine($"Driver location: {driverLocation}");
@@ -82,50 +84,50 @@ namespace NZPropertyScraper
             Console.WriteLine($"Driver exists: {File.Exists(Path.Combine(driverLocation, "geckodriver"))}");
             byte[] imageBytes;
             string satellite = "";
-
-            using (var driver = new FirefoxDriver(driverLocation,options))
+            Property property;
+            using (var driver = new FirefoxDriver(driverLocation, options))
             {
-                
-                driver.Navigate().GoToUrl("https://waipadc.spatial.t1cloud.com/spatial/IntraMaps/ApplicationEngine/frontend/mapbuilder/default.htm?configId=6aa41407-1db8-44e1-8487-0b9a08965283&liteConfigId=9814f62a-448c-4a33-b101-4cf6cac0995a&title=UmF0ZXMlMjBJbmZvcm1hdGlvbg==");
-                
+
+                driver.Navigate().GoToUrl("https://waipadc.spatial.t1cloud.com/spatial/IntraMaps/ApplicationEngine/frontend/mapbuilder/default.htm?configId=6aa41407-1db8-44e1-8487-0b9a08965283&liteConfigId=9814f62a-448c-4a33-b101-4cf6cac0995a&title=UmFhdGVzJTIwSW5mb3JtYXRpb24=");
+
                 IWebElement inputField;
                 while (true)
                 {
                     try
                     {
                         inputField = driver.FindElement(By.CssSelector("input"));
-                        
+
                         break;
                     }
                     catch (Exception)
                     {
 
-                        
+
                     }
                 }
                 Actions actions = new Actions(driver);
-                
+
                 actions.MoveToElement(inputField).Click().Build().Perform();
                 inputField.SendKeys(inputValue);
 
-               
+
                 var otherButton = driver.FindElement(By.CssSelector("button.mb-landscape-home"));
                 actions.MoveToElement(otherButton).Click().Build().Perform();
                 actions.MoveToElement(inputField).Click().Build().Perform();
                 IWebElement result;
-                while (true)
+                await Task.Delay(1000);
+                try
                 {
-                    try
-                    {
-                        result = driver.FindElement(By.CssSelector("li"));
-                        break;
-                    }
-                    catch (Exception)
-                    {
-
-                        
-                    }
+                    result = driver.FindElement(By.CssSelector("li"));
+                    
                 }
+                catch (Exception)
+                {
+                    driver.Close();
+                    return null;
+
+                }
+
                 result.Click();
 
                 while (true)
@@ -151,9 +153,9 @@ namespace NZPropertyScraper
                     propertyValues.Add(fieldList[i].Text, valueList[i].Text);
                 }
 
-                
+
                 string base64 = "";
-                while(base64.Length< 1500000)
+                while (base64.Length < 1500000)
                 {
                     var canvas = driver.FindElement(By.CssSelector("canvas"));
                     base64 = (string)driver.ExecuteScript("return arguments[0].toDataURL('image/png');", canvas);
@@ -164,17 +166,18 @@ namespace NZPropertyScraper
                     base64 = base64.Split(',')[1];
                 }
 
-                satellite = base64;                
-                
+                satellite = base64;
+                driver.Close();
 
             }
-            Property property = new Property(propertyValues);
+            property = new Property(propertyValues);
 
             property.base64satellite = satellite;
 
-            
-            
             return property;
+
+
         }
+
     }
 }
