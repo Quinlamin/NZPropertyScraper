@@ -62,8 +62,16 @@ namespace NZPropertyScraper
         {
             driverLocation = _driverLocation;
         }
-
-        public async Task<Property> PropertyAndRatesWaipa(string inputValue)
+        public void Cleanup(string profDir)
+        {
+            foreach (string file in Directory.EnumerateFiles("selenium-firefox-profile" + profDir, "*", SearchOption.AllDirectories))
+            {
+                File.Delete(file);
+            }
+            Directory.Delete("selenium-firefox-profile" + profDir, true);
+            Console.WriteLine("Deleted: " + "selenium-firefox-profile" + profDir);
+        }
+        public Property PropertyAndRatesWaipa(string inputValue)
         {
 
             Dictionary<string, string> propertyValues = new Dictionary<string, string>();
@@ -115,7 +123,7 @@ namespace NZPropertyScraper
                 actions.MoveToElement(otherButton).Click().Build().Perform();
                 actions.MoveToElement(inputField).Click().Build().Perform();
                 IWebElement result;
-                await Task.Delay(1000);
+                Thread.Sleep(1000);
                 try
                 {
                     result = driver.FindElement(By.CssSelector("li"));
@@ -124,6 +132,7 @@ namespace NZPropertyScraper
                 catch (Exception)
                 {
                     driver.Close();
+                    Cleanup(profDir);
                     return null;
 
                 }
@@ -173,7 +182,7 @@ namespace NZPropertyScraper
             property = new Property(propertyValues);
 
             property.base64satellite = satellite;
-
+            Cleanup(profDir);
             return property;
 
 
